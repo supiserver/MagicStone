@@ -1,5 +1,10 @@
 data_table_path: "plugins/MagicStone/data_table.xlsx"
 
+worlds:
+  - "shigen"
+
+# データテーブルのうち、有効化対象のものを設定してください。
+## データテーブルに無い物を指定しても無効となります。
 max_fortune_level: 5
 
 blocks:
@@ -11,5 +16,3 @@ blocks:
   - "CALCITE"
   - "DEEPSLATE"
 
-worlds:
-  - "shigen"

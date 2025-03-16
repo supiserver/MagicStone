@@ -5,6 +5,8 @@ import net.supiserver.play.magicStone.debug.Error;
 import net.supiserver.play.magicStone.model.Bonus;
 import net.supiserver.play.magicStone.model.Item;
 import net.supiserver.play.magicStone.model.Probability;
+import net.supiserver.play.magicStone.model.sp.SpBonus;
+import net.supiserver.play.magicStone.model.sp.SpItem;
 import net.supiserver.play.magicStone.types.Rank;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -40,6 +42,15 @@ public class ExcelManager {
     private final String DROP_TABLE_FORTUNE_BONUS_START_COL;
     private final String DROP_TABLE_FORTUNE_BONUS_END_COL;
 
+    private final String SP_ITEM_SHEET_NAME;
+    private final int SP_ITEM_START_ROW;
+    private final int SP_ITEM_END_ROW;
+    private final int SP_ITEM_TARGET_ID_ROW;
+    private final String SP_ITEM_MATERIAL_COL;
+    private final String SP_ITEM_NAME_COL;
+    private final String SP_ITEM_CUTOM_MODEL_COL;
+    private final String SP_ITEM_TARGET_ID_START_COL; //確率変動魔法石IDの記載スタート列
+
     private final String BASIC_INFO_SHEET_NAME;
     private final String BASIC_INFO_MAX_WEIGHT_CELL;
 
@@ -50,28 +61,37 @@ public class ExcelManager {
         excel = new Excel(filePath, DEVELOP_SHEET_NAME);
         excel.open();
         ITEM_DATA_SHEET_NAME = excel.read("D2", "item_data");
-        ITEM_DATA_START_ROW = (int) Double.parseDouble(excel.read("D3", "3"));
-        ITEM_DATA_END_ROW = (int) Double.parseDouble(excel.read("D4", "19"));
+        ITEM_DATA_START_ROW = Integer.parseInt(excel.read("D3", "3"));
+        ITEM_DATA_END_ROW = Integer.parseInt(excel.read("D4", "19"));
         ITEM_DATA_ID_COL = excel.read("D5", "B");
         ITEM_DATA_MATERIAL_COL = excel.read("D6", "D");
         ITEM_DATA_NAME_COL = excel.read("D7", "E");
         ITEM_DATA_LORE_COL = excel.read("D8", "F");
         ITEM_DATA_CUSTOM_MODEL_COL = excel.read("D9", "G");
 
-        DROP_TABLE_SHEET_NAME = excel.read("D10", "drop_table");
-        DROP_TABLE_START_ROW = (int) Double.parseDouble(excel.read("D11", "4"));
-        DROP_TABLE_END_ROW = (int) Double.parseDouble(excel.read("D12", "19"));
-        DROP_TABLE_ID_COL = excel.read("D13", "B");
-        DROP_TABLE_WEIGHT_COL = excel.read("D14", "C");
-        DROP_TABLE_BLOCK_BONUS_START_COL = excel.read("D15", "F");
-        DROP_TABLE_BLOCK_BONUS_END_COL = excel.read("D16", "L");
-        DROP_TABLE_RANK_BONUS_START_COL = excel.read("D17", "M");
-        DROP_TABLE_RANK_BONUS_END_COL = excel.read("D18", "U");
-        DROP_TABLE_FORTUNE_BONUS_START_COL = excel.read("D19", "V");
-        DROP_TABLE_FORTUNE_BONUS_END_COL = excel.read("D20", "Z");
+        DROP_TABLE_SHEET_NAME = excel.read("H2", "drop_table");
+        DROP_TABLE_START_ROW = Integer.parseInt(excel.read("H3", "4"));
+        DROP_TABLE_END_ROW = Integer.parseInt(excel.read("H4", "18"));
+        DROP_TABLE_ID_COL = excel.read("H5", "B");
+        DROP_TABLE_WEIGHT_COL = excel.read("H6", "C");
+        DROP_TABLE_BLOCK_BONUS_START_COL = excel.read("H7", "F");
+        DROP_TABLE_BLOCK_BONUS_END_COL = excel.read("H8", "L");
+        DROP_TABLE_RANK_BONUS_START_COL = excel.read("H9", "M");
+        DROP_TABLE_RANK_BONUS_END_COL = excel.read("H10", "U");
+        DROP_TABLE_FORTUNE_BONUS_START_COL = excel.read("H11", "V");
+        DROP_TABLE_FORTUNE_BONUS_END_COL = excel.read("H12", "AA");
 
-        BASIC_INFO_SHEET_NAME = excel.read("D21", "basic_info");
-        BASIC_INFO_MAX_WEIGHT_CELL = excel.read("D22", "C2");
+        SP_ITEM_SHEET_NAME = excel.read("L2","sp_item");
+        SP_ITEM_START_ROW = Integer.parseInt(excel.read("L3","4"));
+        SP_ITEM_END_ROW = Integer.parseInt(excel.read("L4","19"));
+        SP_ITEM_TARGET_ID_ROW = Integer.parseInt(excel.read("L5","3"));
+        SP_ITEM_MATERIAL_COL = excel.read("L6","B");
+        SP_ITEM_NAME_COL = excel.read("L7","C");
+        SP_ITEM_CUTOM_MODEL_COL = excel.read("L8","D");
+        SP_ITEM_TARGET_ID_START_COL = excel.read("L9","E");
+
+        BASIC_INFO_SHEET_NAME = excel.read("P21", "basic_info");
+        BASIC_INFO_MAX_WEIGHT_CELL = excel.read("P22", "C2");
         excel.close();
     }
 
@@ -197,6 +217,34 @@ public class ExcelManager {
         }
         excel.close();
         return result;
+    }
+
+    public SpBonus readSpBonus() throws IOException{
+        excel.open();
+        excel.setSheet(SP_ITEM_SHEET_NAME);
+        Map<SpItem, Map<String,Double>> sp_table = new HashMap<>();
+        int row = SP_ITEM_START_ROW;
+        while (true){
+            Map<String,Double> table = new HashMap<>();
+
+            String mateId = excel.read(String.format("%s%s", SP_ITEM_MATERIAL_COL, row),null);
+            Material mate = mateId==null ? null : Material.valueOf(mateId);
+            String name = excel.read(String.format("%s%s", SP_ITEM_NAME_COL, row));
+            int custommodel = Integer.parseInt(excel.read(String.format("%s%s", SP_ITEM_CUTOM_MODEL_COL, row),"-1"));
+            if((mateId!=null && mateId.equals(EOF_V))||row==SP_ITEM_END_ROW)break;
+            SpItem spItem = new SpItem(mate,name,custommodel);
+
+            int[] cell = Excel.getCellIndex(String.format("%s%d",SP_ITEM_TARGET_ID_START_COL,row));
+            while (true){
+                String id = excel.read(Excel.getCellName(new int[]{cell[0], SP_ITEM_TARGET_ID_ROW}));
+                if(id==null||id.isEmpty())break;
+                Double value = Double.parseDouble(Excel.getCellName(cell));
+                table.put(id,value);
+                cell[0]+=1;
+            }
+            sp_table.put(spItem,table);
+        }
+        return new SpBonus(sp_table);
     }
 
     public Set<Probability> createProbabilities() {
